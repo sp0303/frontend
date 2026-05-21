@@ -22,6 +22,7 @@ import StockPage from './pages/StockPage';
 import PaperPortfolio from './pages/PaperPortfolio';
 import Loader from './components/Loader';
 import StatusPill from './components/StatusPill';
+import Disclaimer from './components/Disclaimer';
 import { fetchSymbols, fetchHistory, fetchBenchmark, fetchInsights, fetchSignals, fetchPaperPositions, fetchPaperAccount, syncMarketData } from './api/market';
 
 import { Instrument, Benchmark, Signal, HistoryPoint, Breadth, PaperPosition, PaperAccount } from './types/market';
@@ -388,11 +389,26 @@ const Dashboard: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <Routes>
-      <Route path="/" element={<Dashboard />} />
-      <Route path="/stock/:symbol" element={<StockPage />} />
-      <Route path="/paper-portfolio" element={<PaperPortfolio />} />
-    </Routes>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Disclaimer />
+      <div style={{ flex: 1 }}>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/stock/:symbol" element={<StockPage />} />
+          <Route path="/paper-portfolio" element={<PaperPortfolio />} />
+        </Routes>
+      </div>
+      <footer style={{ 
+        textAlign: 'center', 
+        padding: '12px', 
+        fontSize: '12px', 
+        color: 'var(--text-muted)',
+        borderTop: '1px solid var(--border-color)',
+        backgroundColor: 'var(--bg-main)'
+      }}>
+        &copy; Sharat Patnayakuni 2026
+      </footer>
+    </div>
   );
 };
 

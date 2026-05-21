@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   LayoutDashboard, 
   Activity, 
@@ -7,9 +7,13 @@ import {
   ShieldCheck, 
   Bell,
   LucideIcon,
-  X
+  X,
+  Monitor,
+  Server,
+  MessageSquare
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
+import FeedbackModal from './FeedbackModal';
 import './Sidebar.css';
 
 interface MenuItem {
@@ -17,6 +21,8 @@ interface MenuItem {
   icon: LucideIcon;
   label: string;
   badge?: number;
+  href?: string;
+  external?: boolean;
 }
 
 interface SidebarProps {
@@ -28,12 +34,17 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, signalCount, isOpen, onClose }) => {
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+
   const menuItems: MenuItem[] = [
     { id: 'Dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'Portfolio', icon: BarChart2, label: 'Paper Portfolio' },
     { id: 'Signals', icon: Activity, label: 'Active Signals', badge: signalCount },
     { id: 'Alerts', icon: Bell, label: 'Alerts' },
     { id: 'Logs', icon: ShieldCheck, label: 'Logs' },
+    { id: 'Grafana', icon: Monitor, label: 'Grafana', href: 'https://monitor-trading-system.sharatpatnayakuni.site/login', external: true },
+    { id: 'Kafka', icon: Server, label: 'Kafka', href: 'https://kafka-trading-system.sharatpatnayakuni.site/?orgId=1&from=now-1h&to=now&timezone=browser', external: true },
+    { id: 'Feedback', icon: MessageSquare, label: 'Feedback' },
     { id: 'Settings', icon: Settings, label: 'Settings' },
   ];
 
@@ -66,11 +77,33 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, signalCount, 
           <ul className="sidebar-menu">
             {menuItems.map((item) => {
               const isActive = activeTab === item.id;
+              
+              if (item.external && item.href) {
+                return (
+                  <li key={item.id}>
+                    <a 
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="sidebar-btn glass-hover"
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                      <item.icon size={18} />
+                      <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
+                    </a>
+                  </li>
+                );
+              }
+
               return (
                 <li key={item.id}>
                   <button 
                     onClick={() => {
-                      onTabChange(item.id);
+                      if (item.id === 'Feedback') {
+                        setIsFeedbackOpen(true);
+                      } else {
+                        onTabChange(item.id);
+                      }
                       if (onClose) onClose();
                     }}
                     className={`sidebar-btn glass-hover ${isActive ? 'active' : ''}`}
@@ -102,6 +135,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, signalCount, 
           <ThemeToggle />
         </div>
       </aside>
+
+      <FeedbackModal 
+        isOpen={isFeedbackOpen} 
+        onClose={() => setIsFeedbackOpen(false)} 
+      />
     </>
   );
 };

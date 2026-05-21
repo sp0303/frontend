@@ -31,8 +31,12 @@ const SignalsGallery: React.FC<SignalsGalleryProps> = ({ signals, loading, onSel
       filtered = filtered.filter(s => s.strategy === filterStrategy);
     }
     
-    // Sort by Win Probability descending
-    return filtered.sort((a, b) => (b.probability || 0) - (a.probability || 0));
+    // Sort by timestamp descending (latest first)
+    return filtered.sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return timeB - timeA;
+    });
   }, [signals, filterStrategy]);
 
   const stats = useMemo(() => {
