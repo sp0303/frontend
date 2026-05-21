@@ -15,6 +15,7 @@ import {
   fetchPaperPositions, closePaperPosition, fetchModelPrediction, syncMarketData
 } from '../api/market';
 import StatusPill from '../components/StatusPill';
+import ClockIST from '../components/ClockIST';
 
 // ─── RSI Gauge ──────────────────────────────────────────────────────────────
 const RSIGauge: React.FC<{ value: number | null }> = ({ value }) => {
@@ -75,6 +76,7 @@ const StockPage: React.FC = () => {
   const [instFlow, setInstFlow] = useState<any>(null);
   const [sentiment, setSentiment] = useState<any>(null);
   const [aiResult, setAiResult] = useState<string | null>(null);
+  const [aiTimestamp, setAiTimestamp] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [paperPosition, setPaperPosition] = useState<PaperPosition | null>(null);
@@ -157,6 +159,7 @@ const StockPage: React.FC = () => {
           triggerAIAnalysis(symbol, context).then(result => {
              if (result && result.analysis) {
                setAiResult(result.analysis);
+               setAiTimestamp(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' }));
              } else {
                setAiResult("No analysis received.");
              }
@@ -213,6 +216,21 @@ const StockPage: React.FC = () => {
     }
   };
 
+  const isMarketClosed = () => {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: 'numeric', hour12: false, weekday: 'short' });
+    const parts = formatter.formatToParts(now);
+    const getPart = (type: string) => parts.find(p => p.type === type)?.value || '';
+    
+    const day = getPart('weekday');
+    const hour = parseInt(getPart('hour') || '0');
+    const minute = parseInt(getPart('minute') || '0');
+    
+    if (day === 'Sat' || day === 'Sun') return true;
+    const timeInMinutes = hour * 60 + minute;
+    return timeInMinutes < 555 || timeInMinutes >= 930; // Market is 9:15 (555) to 15:30 (930) IST
+  };
+
   if (loading) return <Loader text={`Loading full analysis for ${symbol}...`} />;
   if (!instrument) return <div className="app-shell error">Symbol {symbol} not found.</div>;
 
@@ -240,8 +258,26 @@ const StockPage: React.FC = () => {
             <h1 style={{ margin: 0, fontSize: '20px' }}>Nifty <span className="hide-mobile">500 Elite</span></h1>
           </div>
         </div>
-        <div className="nav-links hide-mobile">
-          <button onClick={() => navigate('/')}><LucideLayoutDashboard size={18} /> Dashboard</button>
+        <div className="nav-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginRight: '16px' }}>
+          <button 
+            className={`sync-btn-small ${isSyncing ? 'loading' : ''}`}
+            onClick={handleSync}
+            disabled={isSyncing}
+            style={{
+              padding: '4px 12px',
+              fontSize: '11px',
+              background: 'rgba(99,102,241,0.1)',
+              color: 'var(--accent-color)',
+              border: '1px solid var(--accent-light)',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 600
+            }}
+          >
+            {isSyncing ? 'Syncing...' : 'Fetch Live'}
+          </button>
+          <StatusPill lastUpdated={lastUpdated} isRefreshing={isRefreshing} />
+          <ClockIST />
         </div>
       </div>
 
@@ -261,28 +297,10 @@ const StockPage: React.FC = () => {
                 <div className="meta-row">
                   <span>{instrument.label}</span>
                   {instrument.sector && <span className="sector-tag">{instrument.sector}</span>}
-                  <StatusPill lastUpdated={lastUpdated} isRefreshing={isRefreshing} />
                 </div>
               </div>
               <div className="price-display" style={{ textAlign: 'right' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end', marginBottom: '4px' }}>
-                   <button 
-                    className={`sync-btn-small ${isSyncing ? 'loading' : ''}`}
-                    onClick={handleSync}
-                    disabled={isSyncing}
-                    style={{
-                      padding: '4px 12px',
-                      fontSize: '11px',
-                      background: 'rgba(99,102,241,0.1)',
-                      color: 'var(--accent-color)',
-                      border: '1px solid var(--accent-light)',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontWeight: 600
-                    }}
-                  >
-                    {isSyncing ? 'Syncing...' : 'Fetch Live'}
-                  </button>
                   <span className="last-price">₹{instrument.last_price?.toLocaleString() || instrument.lastPrice?.toLocaleString()}</span>
                 </div>
                 <span className={((instrument.change_pct ?? instrument.change) || 0) >= 0 ? 'positive' : 'negative'}>
@@ -462,6 +480,16 @@ const StockPage: React.FC = () => {
                   {aiResult ? (
                     <div className="ai-response markdown-rendered">
                       {aiResult.split('\n').map((line, i) => <p key={i}>{line}</p>)}
+                      <div style={{ marginTop: '20px', fontSize: '11.5px', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div>
+                          <strong>Status:</strong> {isMarketClosed() ? <span style={{ color: '#ef4444' }}>Market is Closed</span> : <span style={{ color: '#10b981' }}>Market is Open</span>} 
+                          <span style={{ margin: '0 8px', opacity: 0.5 }}>|</span> 
+                          AI Analysis generated at {aiTimestamp}
+                        </div>
+                        <div>
+                          ℹ️ <strong>Note regarding trade filtering:</strong> This textual AI analysis is designed purely for your manual review and interpretation. The actual automated trade signal filtering is handled strictly by the quantitative Strategy Engine and ML Ensemble models below, not this text output.
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <p className="placeholder-text">Waiting for data to run AI analysis...</p>
