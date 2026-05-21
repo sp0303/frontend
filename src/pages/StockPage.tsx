@@ -118,9 +118,56 @@ const StockPage: React.FC = () => {
       if (history.series && history.series.length > 0) {
         const lastPoint = history.series[history.series.length - 1];
         setLatestFeatures(lastPoint);
+        let pred = modelPrediction;
         if (lastPoint && !modelPrediction) { // Fetch if not already present
-          const pred = await fetchModelPrediction(symbol, lastPoint as any);
+          pred = await fetchModelPrediction(symbol, lastPoint as any);
           setModelPrediction(pred);
+        }
+
+        // Trigger AI Analysis automatically
+        setAiLoading(true);
+        setAiResult(null);
+        try {
+          const context = {
+            fundamentals: JSON.stringify({
+              sector: fundamentalData?.sector,
+              pe: fundamentalData?.pe_ratio,
+              market_cap: fundamentalData?.market_cap,
+              business_summary: fundamentalData?.long_summary?.slice(0, 300) + "..."
+            }),
+            news: JSON.stringify((newsItems || []).slice(0, 5).map((n: any) => ({
+              title: n.title,
+              summary: n.summary?.slice(0, 150) + "...",
+              sentiment: n.sentiment_label,
+              relevance: n.relevance_score
+            }))),
+            strategy_results: JSON.stringify(insights?.strategies || []),
+            institutional: JSON.stringify(flowData),
+            regime: insights?.regime || 'Unknown',
+            technicals_1h: JSON.stringify({
+              rsi_14: lastPoint?.rsi_14,
+              macd_hist: lastPoint?.macd_hist,
+              adx_14: lastPoint?.adx_14,
+              vwap: lastPoint?.vwap,
+              bollinger_b: lastPoint?.bollinger_b,
+              close: lastPoint?.close,
+            }),
+            model_prediction: JSON.stringify(pred)
+          };
+          triggerAIAnalysis(symbol, context).then(result => {
+             if (result && result.analysis) {
+               setAiResult(result.analysis);
+             } else {
+               setAiResult("No analysis received.");
+             }
+          }).catch((err: any) => {
+             setAiResult(`Analysis unavailable: ${err.message || "Unknown Error"}`);
+          }).finally(() => {
+             setAiLoading(false);
+          });
+        } catch (e) {
+          console.error("AI trigger error", e);
+          setAiLoading(false);
         }
       }
 
@@ -152,48 +199,7 @@ const StockPage: React.FC = () => {
     }
   };
 
-  const handleAIAnalysis = async () => {
-    if (!symbol) return;
-    setAiLoading(true);
-    try {
-      const context = {
-        fundamentals: JSON.stringify({
-          sector: fundamentals?.sector,
-          pe: fundamentals?.pe_ratio,
-          market_cap: fundamentals?.market_cap,
-          business_summary: fundamentals?.long_summary?.slice(0, 300) + "..."
-        }),
-        news: JSON.stringify(news.slice(0, 5).map(n => ({
-          title: n.title,
-          summary: n.summary?.slice(0, 150) + "...",
-          sentiment: n.sentiment_label,
-          relevance: n.relevance_score
-        }))),
-        strategy_results: JSON.stringify(instrument?.strategies || []),
-        institutional: JSON.stringify(instFlow),
-        regime: instrument?.regime || 'Unknown',
-        technicals_1h: JSON.stringify({
-          rsi_14: latestFeatures?.rsi_14,
-          macd_hist: latestFeatures?.macd_hist,
-          adx_14: latestFeatures?.adx_14,
-          vwap: latestFeatures?.vwap,
-          bollinger_b: latestFeatures?.bollinger_b,
-          close: latestFeatures?.close,
-        }),
-        model_prediction: JSON.stringify(modelPrediction)
-      };
-      const result = await triggerAIAnalysis(symbol, context);
-      if (result && result.analysis) {
-        setAiResult(result.analysis);
-      } else {
-        throw new Error("No analysis received from AI service.");
-      }
-    } catch (err: any) {
-      setAiResult(`Analysis unavailable: ${err.message || "Unknown Error"}`);
-    } finally {
-      setAiLoading(false);
-    }
-  };
+
 
   const handleClosePosition = async () => {
     if (!symbol) return;
@@ -448,15 +454,9 @@ const StockPage: React.FC = () => {
                 <div className="card-header ai-header">
                   <div className="ai-title">
                     <LucideMessageSquare size={18} />
-                    <h3>AI Decision Hub (Gemma)</h3>
+                    <h3>AI Analysis</h3>
                   </div>
-                  <button
-                    className={`gemma-analyze-btn ${aiLoading ? 'loading' : ''}`}
-                    onClick={handleAIAnalysis}
-                    disabled={aiLoading}
-                  >
-                    {aiLoading ? 'Gemma Thinking...' : 'Analyze with Gemma'}
-                  </button>
+                  {aiLoading && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Analyzing...</span>}
                 </div>
                 <div className="ai-console">
                   {aiResult ? (
@@ -464,7 +464,7 @@ const StockPage: React.FC = () => {
                       {aiResult.split('\n').map((line, i) => <p key={i}>{line}</p>)}
                     </div>
                   ) : (
-                    <p className="placeholder-text">Click the button for a real-time institutional analysis by Gemma. Uses RSI, MACD, Model predictions, News and Institutional flow as context.</p>
+                    <p className="placeholder-text">Waiting for data to run AI analysis...</p>
                   )}
                 </div>
               </section>
