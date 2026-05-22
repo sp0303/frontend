@@ -12,7 +12,7 @@ const normalizeRange = (range: string = '1D'): string => {
 
 export const fetchSymbols = async (): Promise<Instrument[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/symbols`);
+    const response = await fetch(`${API_BASE_URL}/symbols`, { cache: 'no-store' });
     if (!response.ok) return [];
     const json = await response.json();
     if (json && json.status === 'success') return json.data || [];
@@ -25,7 +25,7 @@ export const fetchSymbols = async (): Promise<Instrument[]> => {
 
 export const fetchHistory = async (symbol: string, range: string = '1D'): Promise<HistoryData> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/history?symbol=${symbol}&range=${normalizeRange(range)}`);
+    const response = await fetch(`${API_BASE_URL}/history?symbol=${symbol}&range=${normalizeRange(range)}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('History fetch failed');
     const json = await response.json();
     if (json && json.status === 'success') return json.data;
@@ -38,7 +38,7 @@ export const fetchHistory = async (symbol: string, range: string = '1D'): Promis
 
 export const fetchBenchmark = async (range: string = '1D'): Promise<Benchmark> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/benchmark?range=${normalizeRange(range)}`);
+    const response = await fetch(`${API_BASE_URL}/benchmark?range=${normalizeRange(range)}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('Network response not ok');
     const json = await response.json();
     if (json && json.status === 'success' && json.data) {
@@ -70,7 +70,7 @@ export const fetchInsights = async (symbol: string): Promise<Instrument> => {
 
 export const fetchSignals = async (): Promise<Signal[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/signals`);
+    const response = await fetch(`${API_BASE_URL}/signals`, { cache: 'no-store' });
     if (!response.ok) return [];
     const json = await response.json();
     if (json && json.status === 'success') return json.data || [];
